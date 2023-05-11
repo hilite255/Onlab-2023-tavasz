@@ -1,0 +1,52 @@
+﻿@page "/rent/all"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<MudPaper Class="pa-12">
+    <MudText Typo="Typo.h2" Align="Align.Center" Class="mb-8">Összes kölcsönzés</MudText>
+    <MudTable Items="rents" Hover="true">
+        <HeaderContent>
+            <MudTh>Kölcsönző</MudTh>
+            <MudTh>Játékok</MudTh>
+            <MudTh>Kölcsönzés ideje</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Kölcsönző">@context.Renter.LastName @context.Renter.FirstName</MudTd>
+            <MudTd DataLabel="Játékok">Ide jönnek majd a játékok ha sok akkor ...</MudTd>
+            <MudTd DataLabel="Kölcsönzés ideje">@context.DateFrom.ToString("yyyy.MM.dd") - @context.DateTo.ToString("yyyy.MM.dd")</MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudPaper>
+
+@code {
+    string error = "";
+    List<Rent> rents = new();
+    int page = 1;
+    string status = "All";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("init");
+        HttpResponseMessage response;
+        try
+        {
+            response = await Http.GetAsync("/api/rent/list?status=" + status + "&page=" + page);
+        }
+        catch (Exception e)
+        {
+            error = "Nem érhető el a szerver, hiba: " + e.Message;
+            Console.WriteLine(error);
+            return;
+        }
+        var json = await response.Content.ReadAsStringAsync();
+        try
+        {
+            rents = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Rent>>(json);
+        }
+        catch (Exception e)
+        {
+            error = "Json deserialize error: " + e.Message;
+            Console.WriteLine(error);
+        }
+    }
+}

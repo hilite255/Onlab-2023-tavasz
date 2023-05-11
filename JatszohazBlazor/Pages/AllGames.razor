@@ -1,0 +1,116 @@
+﻿@page "/games"
+@inject HttpClient Http
+@inject GameClient gameClient
+@inject NavigationManager Navigation
+
+<MudPaper Class="pa-12">
+
+<MudText Typo="Typo.h2" Align="Align.Center" Class="mb-16">Játékok</MudText>
+
+<MudGrid Justify="Justify.Center">
+    <MudItem xs="3">
+        <MudTextField DebounceInterval="500" @bind-Value="NameFilter" Label="Név" Variant="Variant.Outlined"></MudTextField>
+    </MudItem>
+    <MudItem xs="3">
+        <MudGrid Style="align-items: center;">
+            <MudItem xs="5">
+                <MudText Class="mt-4">Játékosszám:</MudText>
+            </MudItem>
+            <MudItem xs="3">
+                <MudNumericField DebounceInterval="500" @bind-Value="PlayersFrom"></MudNumericField>
+            </MudItem>
+            <MudText Class="mt-4">-</MudText>
+            <MudItem xs="3">
+                <MudNumericField DebounceInterval="500" @bind-Value="PlayersTo"></MudNumericField>
+            </MudItem>
+        </MudGrid>
+    </MudItem>
+    <MudItem xs="3">
+        <MudSelect @bind-Value="Playtime" Variant="Variant.Outlined" T="string" Label="Játékidő" MultiSelection="true">
+            <MudSelectItem Value="@("Rövid")" />
+            <MudSelectItem Value="@("Közepes")" />
+            <MudSelectItem Value="@("Hosszú")" />
+        </MudSelect>
+    </MudItem>
+</MudGrid>
+<MudDivider Class="ma-4" />
+
+@if (error != ""){
+    <MudText Color="Color.Error">@error</MudText>
+}
+@if (games.Length == 0 &&error == "")
+{
+    <MudText>Loading...</MudText>
+}
+else
+{
+    <MudGrid>
+        @foreach (var g in filteredGames)
+        {
+            <MudElement @onclick="() => navigate(g)"><GameCard Instance="@g" /></MudElement>
+        }
+    </MudGrid>
+}
+
+</MudPaper>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("init");
+        games = (await gameClient.GetAllGamesAsync()).ToArray();
+        return;
+        HttpResponseMessage response;
+        try
+        {
+            response = await Http.GetAsync("/api/game/all");
+        }
+        catch(Exception e)
+        {
+            error = "Nem érhető el a szerver, hiba: " + e.Message;
+            Console.WriteLine(error);
+            return;
+        }
+        var json = await response.Content.ReadAsStringAsync();
+        try
+        {
+            games = Newtonsoft.Json.JsonConvert.DeserializeObject<Game[]>(json);
+        }
+        catch(Exception e)
+        {
+            error = "Json deserialize error: " + e.Message;
+            Console.WriteLine(error);
+        }
+    }
+
+    private string error = "";
+
+    public string NameFilter { get; set; } = "";
+    public int PlayersFrom { get; set; } = 1;
+    public int PlayersTo { get; set; } = 20;
+    public string Playtime { get; set; } = "";
+
+    private Game[] games = { };
+    Game[] filteredGames => games
+        .Where(g => g.Name.ToLower().Contains(NameFilter.ToLower()))
+        .Where(g => g.PlayersFrom <= PlayersTo && g.PlayersTo >= PlayersFrom)
+        .Where(g =>
+        {
+            if (Playtime.Length <= 0) return true;
+            List<string> gamePlaytimes = new();
+            if (g.PlaytimeFrom < 20) gamePlaytimes.Add("Rövid");
+            if (g.PlaytimeFrom < 60 && g.PlaytimeTo >= 20) gamePlaytimes.Add("Közepes");
+            if (g.PlaytimeFrom >= 60) gamePlaytimes.Add("Hosszú");
+            foreach (var time in gamePlaytimes)
+            {
+                if (Playtime.Contains(time)) return true;
+            }
+            return false;
+        })
+        .ToArray();
+
+    private void navigate(Game Instance)
+    {
+        Navigation.NavigateTo("/games/" + Instance.ID);
+    }
+}

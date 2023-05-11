@@ -1,0 +1,21 @@
+﻿@inject IConfiguration Configuration
+
+<MudCard Class="ma-2 cursor-pointer">
+    <MudCardHeader>
+        <img src="@Configuration["BackendAddress"]/api/game/image/@Instance.ID"
+             class="card-img-top"
+             onerror="this.src='https://via.placeholder.com/128'"
+             style="width:9rem;height:9rem;object-fit:cover">
+    </MudCardHeader>
+    <MudCardContent>
+        <MudText Typo="Typo.h5">@Instance.Name</MudText>
+        <MudText Typo="Typo.body2">Játékidő: @Instance.PlaytimeFrom - @Instance.PlaytimeTo perc</MudText>
+        <MudText Typo="Typo.body2">Játékosszám: @Instance.PlayersFrom - @Instance.PlayersTo</MudText>
+    </MudCardContent>
+</MudCard>
+
+
+@code {
+    [Parameter]
+    public Game Instance { get; set; }
+}

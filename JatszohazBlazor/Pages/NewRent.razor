@@ -1,0 +1,195 @@
+﻿@page "/rent/new"
+@inject HttpClient Http
+@inject IConfiguration Configuration
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<AuthorizeView>
+    <MudPaper Class="pa-12">
+        <MudText Typo="Typo.h2" Align="Align.Center" Class="mb-8">Új Kölcsönzés</MudText>
+        <MudForm Class="pa-12">
+            <MudDateRangePicker Label="Kölcsönzés ideje:" Class="mb-4" DateRange="daterange" DateRangeChanged="DateRangeChanged" />
+            <MudText Align="Align.Center" Typo="Typo.h4">Kölcsönözhető Játékok:</MudText>
+            <MudGrid Justify="Justify.Center">
+                <MudItem xs="3">
+                    <MudTextField DebounceInterval="500" @bind-Value="NameFilter" Label="Név" Variant="Variant.Outlined"></MudTextField>
+                </MudItem>
+                <MudItem xs="3">
+                    <MudGrid Style="align-items: center;">
+                        <MudItem xs="5">
+                            <MudText Class="mt-4">Játékosszám:</MudText>
+                        </MudItem>
+                        <MudItem xs="3">
+                            <MudNumericField DebounceInterval="500" @bind-Value="PlayersFrom"></MudNumericField>
+                        </MudItem>
+                        <MudText Class="mt-4">-</MudText>
+                        <MudItem xs="3">
+                            <MudNumericField DebounceInterval="500" @bind-Value="PlayersTo"></MudNumericField>
+                        </MudItem>
+                    </MudGrid>
+                </MudItem>
+                <MudItem xs="3">
+                    <MudSelect @bind-Value="Playtime" Variant="Variant.Outlined" T="string" Label="Játékidő" MultiSelection="true">
+                        <MudSelectItem Value="@("Rövid")" />
+                        <MudSelectItem Value="@("Közepes")" />
+                        <MudSelectItem Value="@("Hosszú")" />
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+            <MudDivider Class="ma-4" />
+            <MudGrid Class="mb-4">
+                @foreach (var g in filteredGames)
+                {
+                <MudElement @onclick="() => GameSelectionChanged(g)"><GameCard Instance="@g" /></MudElement>
+                }
+            </MudGrid>
+            <MudDivider Class="ma-4" />
+            <MudText Align="Align.Center" Typo="Typo.h4">Kiválasztott Játékok:</MudText>
+            <MudGrid Class="mb-4">
+                @foreach (var g in rent.Games)
+                {
+                    <MudElement @onclick="() => GameSelectionChanged(g)"><GameCard Instance="@g" /></MudElement>
+                }
+            </MudGrid>
+            <MudDivider Class="ma-4" />
+            <MudText Align="Align.Center" Typo="Typo.h4">Megjegyzés:</MudText>
+            <MudTextField Class="mb-4" T="string" Variant="Variant.Outlined" @bind-Value="rent.Comment"  Lines="3" />
+            <MudButton Class="mr-4 d-inline" Color="Color.Primary" Variant="Variant.Filled" OnClick="PostRent">Leadás</MudButton>
+            <MudButton Class="d-inline" Color="Color.Error" Variant="Variant.Filled" >Mégsem</MudButton>
+        </MudForm>
+    </MudPaper>
+</AuthorizeView>
+
+@code {
+    int step = 1;
+    bool done = false;
+    DateRange daterange = new(DateTime.Now.AddDays(1), DateTime.Now.AddDays(2));
+    NewRentDto rent = new() { Games = new(), Comment = "" };
+    List<Game> availableGames = new();
+    string error = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("init");
+        rent.DateFrom = daterange.Start.ToString();
+        rent.DateTo = daterange.End.ToString();
+        HttpResponseMessage response;
+        try
+        {
+            response = await Http.GetAsync("/api/rent/games?dateFrom=" + daterange.Start.ToString() + "&dateTo=" + daterange.End.ToString());
+        }
+        catch(Exception e)
+        {
+            error = "Nem érhető el a szerver, hiba: " + e.Message;
+            Console.WriteLine(error);
+            return;
+        }
+        var json = await response.Content.ReadAsStringAsync();
+        try
+        {
+            availableGames = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Game>>(json);
+        }
+        catch(Exception e)
+        {
+            error = "Json deserialize error: " + e.Message;
+            Console.WriteLine(error);
+        }
+    }
+
+    public string NameFilter { get; set; } = "";
+    public int PlayersFrom { get; set; } = 1;
+    public int PlayersTo { get; set; } = 20;
+    public string Playtime { get; set; } = "";
+    Game[] filteredGames => availableGames
+        .Where(g => !rent.Games.Contains(g))
+        .Where(g => g.Name.ToLower().Contains(NameFilter.ToLower()))
+        .Where(g => g.PlayersFrom <= PlayersTo && g.PlayersTo >= PlayersFrom)
+        .Where(g =>
+        {
+            if (Playtime.Length <= 0) return true;
+            List<string> gamePlaytimes = new();
+            if (g.PlaytimeFrom < 20) gamePlaytimes.Add("Rövid");
+            if (g.PlaytimeFrom < 60 && g.PlaytimeTo >= 20) gamePlaytimes.Add("Közepes");
+            if (g.PlaytimeFrom >= 60) gamePlaytimes.Add("Hosszú");
+            foreach (var time in gamePlaytimes)
+            {
+                if (Playtime.Contains(time)) return true;
+            }
+            return false;
+        })
+        .ToArray();
+
+    private void GameSelectionChanged(Game g)
+    {
+        Console.WriteLine("Selection changing");
+        if (rent.Games.Contains(g))
+        {
+            rent.Games.Remove(g);
+            Snackbar.Clear();
+            Snackbar.Add(g.Name + " törölve a kölcsönzésből", Severity.Error);
+        }
+        else
+        {
+            rent.Games.Add(g);
+            Snackbar.Clear();
+            Snackbar.Add(g.Name + " hozzáadva a kölcsönzéshez", Severity.Success);
+        }
+    }
+
+    private async void DateRangeChanged(DateRange? newRange)
+    {
+        Console.WriteLine("DateRangeChanged");
+        daterange = newRange;
+        rent.DateFrom = daterange.Start.ToString();
+        rent.DateTo = daterange.End.ToString();
+        rent.Games.Clear();
+        HttpResponseMessage response;
+        try
+        {
+            response = await Http.GetAsync("/api/rent/games?dateFrom=" + daterange.Start.ToString() + "&dateTo=" + daterange.End.ToString());
+        }
+        catch (Exception e)
+        {
+            error = "Nem érhető el a szerver, hiba: " + e.Message;
+            Console.WriteLine(error);
+            return;
+        }
+        var json = await response.Content.ReadAsStringAsync();
+        try
+        {
+            availableGames = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Game>>(json);
+        }
+        catch (Exception e)
+        {
+            error = "Json deserialize error: " + e.Message;
+            Console.WriteLine(error);
+        }
+        StateHasChanged();
+    }
+
+    private async void PostRent()
+    {
+        HttpResponseMessage response;
+        try
+        {
+            response = await Http.PostAsJsonAsync("/api/rent", rent);
+        }
+        catch (Exception e)
+        {
+            error = "Nem érhető el a szerver, hiba: " + e.Message;
+            Console.WriteLine(error);
+            return;
+        }
+        var json = await response.Content.ReadAsStringAsync();
+        try
+        {
+            var newRent = Newtonsoft.Json.JsonConvert.DeserializeObject<Rent>(json);
+            NavigationManager.NavigateTo("/rent/" + newRent.ID);
+        }
+        catch (Exception e)
+        {
+            error = "Json deserialize error: " + e.Message;
+            Console.WriteLine(error);
+        }
+    }
+}

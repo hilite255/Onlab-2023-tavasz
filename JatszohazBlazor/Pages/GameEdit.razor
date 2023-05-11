@@ -1,0 +1,120 @@
+﻿@page "/games/edit/{id}"
+@inject HttpClient Http
+@inject IConfiguration Configuration
+@inject NavigationManager NavigationManager
+
+<AuthorizeView Roles="Admin">
+    <MudPaper Class="pa-12">
+        <MudText Typo="Typo.h2" Align="Align.Center" Class="mb-8">Játék szerkesztése</MudText>
+        <MudForm Class="pa-12" @bind-IsValid="isValid" >
+            <MudTextField @bind-Value="@Instance.Name" Label="Név" Variant="Variant.Outlined" Class="mb-4" Required="true" />
+            <MudTextField @bind-Value="@Instance.SubName" Label="Megjegyzés" Variant="Variant.Outlined" Class="mb-4" />
+            <MudGrid>
+                <MudItem xs="3">
+                    <MudNumericField @bind-Value="@Instance.PlayersFrom" Label="Játékosszámtól" Variant="Variant.Outlined" Class="mb-4" Required="true" />
+                </MudItem>
+                <MudItem xs="3">
+                    <MudNumericField @bind-Value="@Instance.PlayersTo" Label="Játékosszámig" Variant="Variant.Outlined" Class="mb-4" Required="true" />
+                </MudItem>
+            </MudGrid>
+            <MudGrid>
+                <MudItem xs="3">
+                    <MudNumericField @bind-Value="@Instance.PlaytimeFrom" Label="Játékidőtől" Variant="Variant.Outlined" Class="mb-4" Required="true" />
+                </MudItem>
+                <MudItem xs="3">
+                    <MudNumericField @bind-Value="@Instance.PlaytimeTo" Label="Játékidőig" Variant="Variant.Outlined" Class="mb-4" Required="true" />
+                </MudItem>
+            </MudGrid>
+            <MudImage Width="200" Src="@imageAddress" Class="mb-4" onerror="this.src='https://via.placeholder.com/128'"></MudImage>
+
+            @*Itt még hiányzik a kép feltöltés gomb*@
+
+            <MudSelect @bind-Value="@Instance.ParentGame" Label="Kiegészítője ennek" Variant="Variant.Outlined" Clearable="true" Class="mb-4">
+                @foreach (var game in games)
+                {
+                    <MudSelectItem Value="game">@game.Name</MudSelectItem>
+                }
+            </MudSelect>
+            <MudButton Class="mr-4 d-inline" Color="Color.Primary" Variant="Variant.Filled" OnClick="HandleUpdate">Mentés</MudButton>
+            <MudButton Class="d-inline" Color="Color.Error" Variant="Variant.Filled" OnClick="HandleCancel">Mégse</MudButton>
+        </MudForm>
+    </MudPaper>
+</AuthorizeView>
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = "";
+    private string imageAddress;
+    private string error = "";
+    bool isValid = true;
+    private Game Instance { get; set; } = new();
+    private Game[] games = { };
+
+    protected override async Task OnInitializedAsync()
+    {
+        imageAddress = Configuration["BackendAddress"] + "/api/game/image/" + Id;
+        HttpResponseMessage response;
+        try
+        {
+            response = await Http.GetAsync("/api/game/" + Id);
+        }
+        catch (Exception e)
+        {
+            error = "Nem érhető el a szerver, hiba: " + e.Message;
+            Console.WriteLine(error);
+            return;
+        }
+        var json = await response.Content.ReadAsStringAsync();
+        try
+        {
+            Instance = Newtonsoft.Json.JsonConvert.DeserializeObject<Game>(json);
+        }
+        catch (Exception e)
+        {
+            error = "Json deserialize error: " + e.Message;
+            Console.WriteLine(error);
+        }
+
+        try
+        {
+            response = await Http.GetAsync("/api/game/all");
+        }
+        catch (Exception e)
+        {
+            error = "Nem érhető el a szerver, hiba: " + e.Message;
+            Console.WriteLine(error);
+            return;
+        }
+        json = await response.Content.ReadAsStringAsync();
+        try
+        {
+            games = Newtonsoft.Json.JsonConvert.DeserializeObject<Game[]>(json);
+        }
+        catch (Exception e)
+        {
+            error = "Json deserialize error: " + e.Message;
+            Console.WriteLine(error);
+        }
+    }
+
+    private void HandleCancel()
+    {
+        NavigationManager.NavigateTo("/games/" + Id);
+    }
+
+    private async void HandleUpdate()
+    {
+        HttpResponseMessage response;
+        try
+        {
+            response = await Http.PostAsJsonAsync("/api/game/", Instance);
+            NavigationManager.NavigateTo("/games/" + Id);
+        }
+        catch (Exception e)
+        {
+            error = "Nem érhető el a szerver, hiba: " + e.Message;
+            Console.WriteLine(error);
+            return;
+        }
+    }
+}

@@ -1,0 +1,93 @@
+﻿@page "/games/{id}"
+@inject HttpClient Http
+@inject IConfiguration Configuration
+@inject NavigationManager NavigationManager
+
+@if (error != "")
+{
+    <MudText Color="Color.Error">@error</MudText>
+}
+else{
+    <MudText Typo="Typo.h2" Align="Align.Center" Class="mb-16">@Instance.Name</MudText>
+    <MudGrid Justify="Justify.Center">
+        <MudItem xs="4">
+            <MudImage Style="max-width: 100%" Src="@imageAddress" onerror="this.src='https://via.placeholder.com/512'" />
+        </MudItem>
+        <MudItem xs="4">
+            <MudGrid>
+                <MudItem xs="6">
+                    <MudText>Játékosszám:</MudText>
+                    <MudText>Játékidő:</MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText>@Instance.PlayersFrom - @Instance.PlayersTo</MudText>
+                    <MudText>@Instance.PlaytimeFrom - @Instance.PlaytimeTo perc</MudText>
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+    </MudGrid>
+    <AuthorizeView Roles="Admin">
+        <MudGrid Justify="Justify.Center">
+            <MudItem xs="4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="HandleEdit">Szerkesztés</MudButton>
+            </MudItem>
+            <MudItem xs="4">
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="HandleDelete">Törlés</MudButton>
+            </MudItem>
+        </MudGrid>
+    </AuthorizeView>
+}
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = "";
+    private string imageAddress;
+    private string error = "";
+    private Game Instance { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        imageAddress = Configuration["BackendAddress"] + "/api/game/image/" + Id;
+        HttpResponseMessage response;
+        try
+        {
+            response = await Http.GetAsync("/api/game/" + Id);
+        }
+        catch (Exception e)
+        {
+            error = "Nem érhető el a szerver, hiba: " + e.Message;
+            Console.WriteLine(error);
+            return;
+        }
+        var json = await response.Content.ReadAsStringAsync();
+        try
+        {
+            Instance = Newtonsoft.Json.JsonConvert.DeserializeObject<Game>(json);
+        }
+        catch (Exception e)
+        {
+            error = "Json deserialize error: " + e.Message;
+            Console.WriteLine(error);
+        }
+    }
+
+    private async void HandleDelete()
+    {
+        try
+        {
+            var response = await Http.DeleteAsync("/api/game/" + Id);
+            NavigationManager.NavigateTo("");
+        }
+        catch (Exception e)
+        {
+            error = "Nem érhető el a szerver, hiba: " + e.Message;
+            Console.WriteLine(error);
+            return;
+        }
+    }
+
+    private async void HandleEdit()
+    {
+        NavigationManager.NavigateTo("/games/edit/" + Id);
+    }
+}

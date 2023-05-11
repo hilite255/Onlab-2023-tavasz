@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="Domain.Models.Game">
+    <Position X="8.75" Y="1" Width="1.5" />
+    <AssociationLine Name="ParentGame" Type="Domain.Models.Game" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="10.25" Y="1.562" />
+        <Point X="10.625" Y="1.562" />
+        <Point X="10.625" Y="0.625" />
+        <Point X="9.5" Y="0.625" />
+        <Point X="9.5" Y="1" />
+      </Path>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>QAAAAAAAAAAAgAAAAAAEAAQAAAAAAIgAAACAAAAAAAQ=</HashCode>
+      <FileName>Models\Game.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="ParentGame" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="Domain.Models.Rent">
+    <Position X="6" Y="4.5" Width="1.5" />
+    <NestedTypes>
+      <Enum Name="Domain.Models.Rent.RentStatus" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Models\Rent.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Enum>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAEAAAAgAAAAAAAAAAAAAAAABAQAAAAAAAEAAA=</HashCode>
+      <FileName>Models\Rent.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Renter" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="Domain.Models.RentComment">
+    <Position X="3" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAgAAAAAAAAAAAACAAAAABEAAAIAAAAAA=</HashCode>
+      <FileName>Models\RentComment.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Rent" />
+      <Property Name="Creator" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="Domain.Models.RentGameLink">
+    <Position X="8.75" Y="4.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAgAAAAAAAAAAAACgAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Models\RentGameLink.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Game" />
+      <Property Name="Rent" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="Domain.Models.User">
+    <Position X="5.5" Y="1" Width="1.5" />
+    <NestedTypes>
+      <Enum Name="Domain.Models.User.UserPermissions" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Models\User.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Enum>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>AAAAAEAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAg=</HashCode>
+      <FileName>Models\User.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

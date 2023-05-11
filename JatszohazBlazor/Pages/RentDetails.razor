@@ -1,0 +1,143 @@
+﻿@page "/rent/{id}"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<MudPaper Class="pa-12">
+    <MudText Typo="Typo.h2" Align="Align.Center" Class="mb-8">Kölcsönzés Részletek</MudText>
+    @if(rent != null)
+    {
+        <MudText Typo="Typo.h5">Kölcsönző: @rent.Renter.LastName @rent.Renter.FirstName</MudText>
+        <MudText Typo="Typo.h5">Email cím: @rent.Renter.Email</MudText>
+        <MudText Typo="Typo.h5" Class="mt-2">Kölcsönzés állapota: @rent.Status</MudText>
+        <AuthorizeView Roles="Admin">
+            <MudButtonGroup Color="Color.Primary" Variant="Variant.Filled" Class="mt-4">
+                @if (rent.Status == "Pending")
+                {
+                    <MudButton @onclick='() => ChangeStatus("Approved")'>Elfogad</MudButton>
+                    <MudButton @onclick='() => ChangeStatus("Declined")'>Elutasít</MudButton>
+                }
+                @if (rent.Status == "Approved")
+                {
+                    <MudButton @onclick='() => ChangeStatus("GaveOut")'>Kiad</MudButton>
+                    <MudButton @onclick='() => ChangeStatus("Declined")'>Elutasít</MudButton>
+                }
+                @if (rent.Status == "GaveOut")
+                {
+                    <MudButton @onclick='() => ChangeStatus("InMyRoom")'>Szobámban</MudButton>
+                    <MudButton @onclick='() => ChangeStatus("Back")'>Visszahoz</MudButton>
+                }
+                @if (rent.Status == "InMyRoom")
+                {
+                    <MudButton @onclick='() => ChangeStatus("Back")'>Visszahoz</MudButton>
+                }
+                @if (rent.Status == "Declined")
+                {
+                    <MudButton @onclick='() => ChangeStatus("Approved")'>Elfogad</MudButton>
+                }
+            </MudButtonGroup>
+        </AuthorizeView>
+        <MudText Class="mb-4 mt-4" Typo="Typo.h4">Kölcsönzött játékok:</MudText>
+        <MudGrid Class="mb-4">
+            @foreach (var g in rent.Games)
+            {
+                <GameCard Instance="@g" />
+            }
+        </MudGrid>
+        <MudText Class="mb-4 mt-4" Typo="Typo.h4">Megjegyzések:</MudText>
+        <MudTimeline TimelinePosition="TimelinePosition.Start">
+            @foreach (var comment in rent.Comments.OrderByDescending(r => r.Date))
+            {
+                <MudTimelineItem>
+                    <ItemContent>
+                        <MudText>@comment.Creator.LastName @comment.Creator.FirstName</MudText>
+                        <MudText Class="mt2">@comment.Message</MudText>
+                    </ItemContent>
+                </MudTimelineItem>
+            }
+        </MudTimeline>
+    <MudText Class="mb-4 mt-4" Typo="Typo.h4">Új megjegyzések:</MudText>
+        <MudTextField @bind-Value="newComment" Lines="5" Variant="Variant.Outlined" />
+    <MudButton Class="mt-4" Color="Color.Primary" Variant="Variant.Filled" OnClick="PostComment">Küldés</MudButton>
+    }
+</MudPaper>
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = "";
+    string error = "";
+    string newComment = "";
+    RentDetailsDto rent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("init");
+        HttpResponseMessage response;
+        try
+        {
+            response = await Http.GetAsync("/api/rent/" + Id);
+        }
+        catch (Exception e)
+        {
+            error = "Nem érhető el a szerver, hiba: " + e.Message;
+            Console.WriteLine(error);
+            return;
+        }
+        var json = await response.Content.ReadAsStringAsync();
+        try
+        {
+            rent = Newtonsoft.Json.JsonConvert.DeserializeObject<RentDetailsDto>(json);
+        }
+        catch (Exception e)
+        {
+            error = "Json deserialize error: " + e.Message;
+            Console.WriteLine(error);
+        }
+    }
+
+    public class RentDetailsDto
+    {
+        public int Id { get; set; }
+        public DateTime DateFrom { get; set; }
+        public DateTime DateTo { get; set; }
+        public string Status { get; set; }
+        public User Renter { get; set; }
+        public List<Game> Games { get; set; }
+        public List<RentComment> Comments { get; set; }
+    }
+
+    private async void PostComment()
+    {
+        if (newComment == "") return;
+        HttpResponseMessage response;
+        try
+        {
+            response = await Http.PostAsJsonAsync("/api/rent/comment/" + rent.Id, new{Message = newComment});
+            newComment = "";
+        }
+        catch (Exception e)
+        {
+            error = "Nem érhető el a szerver, hiba: " + e.Message;
+            Console.WriteLine(error);
+            return;
+        }
+        await OnInitializedAsync();
+        StateHasChanged();
+    }
+
+    private async void ChangeStatus(string status)
+    {
+        HttpResponseMessage response;
+        try
+        {
+            response = await Http.PostAsJsonAsync("/api/rent/status/" + rent.Id, new { Status = status });
+        }
+        catch (Exception e)
+        {
+            error = "Nem érhető el a szerver, hiba: " + e.Message;
+            Console.WriteLine(error);
+            return;
+        }
+        await OnInitializedAsync();
+        StateHasChanged();
+    }
+}

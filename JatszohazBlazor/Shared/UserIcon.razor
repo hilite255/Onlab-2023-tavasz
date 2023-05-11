@@ -1,0 +1,24 @@
+﻿@inject NavigationManager NavigationManager
+
+<AuthorizeView>
+    <Authorized>
+        <MudIconButton Class="ma-1" Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Inherit" Edge="Edge.End" />
+    </Authorized>
+    <NotAuthorized>
+        <MudButton
+            OnClick="Register"
+            Class="ma-1"
+            Variant="Variant.Filled"
+            Color="Color.Primary"
+            EndIcon="@Icons.Material.Filled.AppRegistration">
+            Regisztráció
+        </MudButton>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code{
+    private void Register()
+    {
+        NavigationManager.NavigateTo("/register");
+    }
+}
